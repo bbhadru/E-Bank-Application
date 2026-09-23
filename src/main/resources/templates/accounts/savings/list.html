@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savings Accounts - E-Bank26</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/static/css/style.css}" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('savings')}"></div>
+
+<div class="main-content">
+    <div th:replace="~{fragments/layout :: topbar('Savings Accounts (SB)')}"></div>
+
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Filters & Action Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-2 justify-content-between align-items-center">
+                <div class="col-md-8">
+                    <form th:action="@{/accounts/savings}" method="get" class="row g-2">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" name="query" th:value="${query}" class="form-control" placeholder="Search account no, member name...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="status" class="form-select">
+                                <option value="" th:selected="${status == null or status == ''}">All Statuses</option>
+                                <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Active</option>
+                                <option value="CLOSED" th:selected="${status == 'CLOSED'}">Closed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100">Search</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a th:href="@{/accounts/savings/create}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Open Savings Account
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th class="ps-4">Account Number</th>
+                        <th>Member Name</th>
+                        <th>Balance (INR)</th>
+                        <th>Interest Rate</th>
+                        <th>Min. Balance</th>
+                        <th>Status</th>
+                        <th>Opened</th>
+                        <th class="text-end pe-4">Transactions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="acc : ${accounts}">
+                        <td class="ps-4 fw-bold text-primary">
+                            <a th:href="@{/accounts/savings/statement/{id}(id=${acc.sbId})}" class="text-decoration-none" th:text="${acc.accountNumber}">SB10000001</a>
+                        </td>
+                        <td class="fw-medium" th:text="${acc.member.fullName}">John Doe</td>
+                        <td class="fw-bold" th:text="|₹ ${#numbers.formatDecimal(acc.balance, 1, 2)}|">₹ 0.00</td>
+                        <td th:text="|${acc.interestRate}% p.a.|">4.00%</td>
+                        <td class="text-muted" th:text="|₹ ${acc.minimumBalance}|">₹ 500.00</td>
+                        <td>
+                            <span class="badge" th:classappend="${acc.status == 'ACTIVE' ? 'badge-active' : 'badge-closed'}" th:text="${acc.status}">ACTIVE</span>
+                        </td>
+                        <td th:text="${#temporals.format(acc.openedDate, 'dd-MMM-yyyy')}">01-Jan-2026</td>
+                        <td class="text-end pe-4">
+                            <button type="button" class="btn btn-sm btn-success me-1"
+                                    data-bs-toggle="modal" data-bs-target="#transactionModal"
+                                    th:data-account-id="${acc.sbId}"
+                                    th:data-account-number="${acc.accountNumber}"
+                                    data-txn-type="Deposit">
+                                <i class="bi bi-arrow-down-left"></i> Deposit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger me-1"
+                                    data-bs-toggle="modal" data-bs-target="#transactionModal"
+                                    th:data-account-id="${acc.sbId}"
+                                    th:data-account-number="${acc.accountNumber}"
+                                    data-txn-type="Withdraw">
+                                <i class="bi bi-arrow-up-right"></i> Withdraw
+                            </button>
+                            <a th:href="@{/accounts/savings/statement/{id}(id=${acc.sbId})}" class="btn btn-sm btn-outline-secondary" title="View Statement">
+                                <i class="bi bi-receipt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(accounts)}">
+                        <td colspan="8" class="text-center py-4 text-muted">No savings accounts found.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3" th:if="${totalPages > 1}">
+            <div class="small text-muted">Total: <span th:text="${totalItems}">0</span> accounts</div>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/accounts/savings(page=${currentPage - 1}, query=${query}, status=${status})}">Prev</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${currentPage == i ? 'active' : ''}">
+                    <a class="page-link" th:href="@{/accounts/savings(page=${i}, query=${query}, status=${status})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/accounts/savings(page=${currentPage + 1}, query=${query}, status=${status})}">Next</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Deposit/Withdraw Modal -->
+<div class="modal fade" id="transactionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalTitle">Post Transaction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="modalForm" th:action="@{/accounts/savings/deposit}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <div class="modal-body">
+                    <input type="hidden" id="modalAccountId" name="accountId">
+                    <input type="hidden" id="modalTxnType" name="txnType" value="DEPOSIT">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Amount (INR) *</label>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="Enter amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Narration</label>
+                        <input type="text" name="narration" class="form-control" placeholder="e.g. Counter Cash Transaction">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reference / Cheque Number</label>
+                        <input type="text" name="referenceNumber" class="form-control" placeholder="Optional reference">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Submit Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/static/js/main.js}"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Statements - E-Bank26</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link th:href="@{/static/css/style.css}" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('trial-balance')}"></div>
+
+<div class="main-content">
+    <div th:replace="~{fragments/layout :: topbar('Trial Balance & Profit and Loss')}"></div>
+
+    <!-- Export Toolbar -->
+    <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge" th:classappend="${trialBalance.isBalanced ? 'bg-success' : 'bg-danger'}"
+                      th:text="${trialBalance.isBalanced ? '✓ BOOKS BALANCED (Debit = Credit)' : '⚠ OUT OF BALANCE'}">
+                    BOOKS BALANCED
+                </span>
+                <span class="text-muted small ms-2">Real-time ledger summary computed from all double-entry vouchers</span>
+            </div>
+            <div>
+                <a th:href="@{/reports/export(reportType='TRIAL_BALANCE', format='excel')}" class="btn btn-outline-success btn-sm me-2">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                </a>
+                <a th:href="@{/reports/export(reportType='TRIAL_BALANCE', format='pdf')}" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trial Balance Table -->
+    <div class="card mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-calculator me-2"></i> Trial Balance Statement</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th class="ps-4">Ledger Code</th>
+                        <th>Account Name</th>
+                        <th>Classification</th>
+                        <th class="text-end">Total Debit (INR)</th>
+                        <th class="text-end pe-4">Total Credit (INR)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="entry : ${trialBalance.entries}">
+                        <td class="ps-4 fw-semibold text-primary" th:text="${entry.code}">CASH_ACCOUNT</td>
+                        <td class="fw-medium" th:text="${entry.name}">Cash Account</td>
+                        <td><span class="badge bg-light text-dark border" th:text="${entry.type}">ASSET</span></td>
+                        <td class="text-end fw-semibold text-danger" th:text="|₹ ${#numbers.formatDecimal(entry.debit, 1, 2)}|">₹ 0.00</td>
+                        <td class="text-end pe-4 fw-semibold text-success" th:text="|₹ ${#numbers.formatDecimal(entry.credit, 1, 2)}|">₹ 0.00</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(trialBalance.entries)}">
+                        <td colspan="5" class="text-center py-4 text-muted">No accounting transactions posted yet.</td>
+                    </tr>
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="3" class="ps-4 text-uppercase">Total Trial Balance</td>
+                        <td class="text-end text-danger fs-6" th:text="|₹ ${#numbers.formatDecimal(trialBalance.totalDebit, 1, 2)}|">₹ 0.00</td>
+                        <td class="text-end pe-4 text-success fs-6" th:text="|₹ ${#numbers.formatDecimal(trialBalance.totalCredit, 1, 2)}|">₹ 0.00</td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profit and Loss Section -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-success"><i class="bi bi-arrow-up-circle me-2"></i> Operating Incomes</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tbody>
+                        <tr th:each="inc : ${profitAndLoss.incomes}">
+                            <td class="ps-4" th:text="${inc.name}">Interest Income on Loans</td>
+                            <td class="text-end pe-4 fw-bold text-success" th:text="|₹ ${#numbers.formatDecimal(inc.amount, 1, 2)}|">₹ 0.00</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(profitAndLoss.incomes)}">
+                            <td colspan="2" class="text-center py-3 text-muted">No operating income posted.</td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td class="ps-4">Total Income</td>
+                            <td class="text-end pe-4 text-success" th:text="|₹ ${#numbers.formatDecimal(profitAndLoss.totalIncome, 1, 2)}|">₹ 0.00</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-arrow-down-circle me-2"></i> Operating Expenses</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <tbody>
+                        <tr th:each="exp : ${profitAndLoss.expenses}">
+                            <td class="ps-4" th:text="${exp.name}">Interest Expense on Savings</td>
+                            <td class="text-end pe-4 fw-bold text-danger" th:text="|₹ ${#numbers.formatDecimal(exp.amount, 1, 2)}|">₹ 0.00</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(profitAndLoss.expenses)}">
+                            <td colspan="2" class="text-center py-3 text-muted">No operating expenses posted.</td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td class="ps-4">Total Expenses</td>
+                            <td class="text-end pe-4 text-danger" th:text="|₹ ${#numbers.formatDecimal(profitAndLoss.totalExpense, 1, 2)}|">₹ 0.00</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Profit / Loss Banner -->
+        <div class="col-12">
+            <div class="card p-3" th:classappend="${profitAndLoss.netProfit >= 0 ? 'border-success bg-success-subtle' : 'border-danger bg-danger-subtle'}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0 fw-bold" th:text="${profitAndLoss.netProfit >= 0 ? 'Net Operating Profit' : 'Net Operating Loss'}">Net Operating Profit</h5>
+                        <small class="text-muted">Calculated as Total Incomes minus Total Expenses</small>
+                    </div>
+                    <h3 class="fw-bold mb-0"
+                        th:classappend="${profitAndLoss.netProfit >= 0 ? 'text-success' : 'text-danger'}"
+                        th:text="|₹ ${#numbers.formatDecimal(profitAndLoss.netProfit, 1, 2)}|">₹ 0.00</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
